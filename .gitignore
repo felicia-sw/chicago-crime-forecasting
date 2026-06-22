@@ -36,5 +36,6 @@ data/processed/base_forecasts_canary.csv
 data/processed/base_forecasts_lighttest.csv
 data/processed/base_forecasts_partial.csv
 
-# Claude Code local settings (machine-specific)
-.claude/settings.local.json
+# Claude Code tooling — kept local only, not part of the published repo
+.claude/
+CLAUDE.md
