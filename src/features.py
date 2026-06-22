@@ -21,6 +21,7 @@ Key semantics (state these in the paper):
 Input : data/processed/weekly_district_panel.csv   (district, week, count)
 Output: data/processed/model_frame.csv             (one row per district x origin-week)
 """
+import os
 from pathlib import Path
 
 import numpy as np
@@ -29,9 +30,11 @@ import yaml
 import holidays
 
 ROOT = Path(__file__).resolve().parents[1]
-CFG = yaml.safe_load((ROOT / "config.yaml").read_text())
+# CRIME_CONFIG lets a second experiment (e.g. config_regime2020.yaml) reuse this
+# pipeline unchanged; out_subdir keeps that run's outputs isolated from the main run.
+CFG = yaml.safe_load((ROOT / os.environ.get("CRIME_CONFIG", "config.yaml")).read_text())
 PANEL = ROOT / CFG["paths"]["panel"]
-OUT = ROOT / CFG["paths"]["processed"] / "model_frame.csv"
+OUT = ROOT / CFG["paths"]["processed"] / CFG.get("out_subdir", "") / "model_frame.csv"
 
 LAGS = [1, 2, 3, 4, 8, 12, 52]
 ROLL_WINDOWS = [4, 8, 12]
@@ -94,6 +97,8 @@ def build_features() -> pd.DataFrame:
 
     # --- restrict to the modeling window; pre-2015 kept only as feature history ---
     df = df[df["week"] >= pd.Timestamp(CFG["window_start"])].copy()
+    if CFG.get("eval_end"):                          # optional origin cap (e.g. focus the 2020 run)
+        df = df[df["week"] <= pd.Timestamp(CFG["eval_end"])].copy()
     return df.reset_index(drop=True)
 
 

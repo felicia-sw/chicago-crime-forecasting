@@ -21,6 +21,7 @@ Outputs:
                                            a metric): static (1), horizon (per h), regime
                                            (per h per week, for the weight-trajectory figure)
 """
+import os
 from pathlib import Path
 
 import numpy as np
@@ -29,9 +30,10 @@ import yaml
 from scipy.optimize import minimize
 
 ROOT = Path(__file__).resolve().parents[1]
-CFG = yaml.safe_load((ROOT / "config.yaml").read_text())
+CFG = yaml.safe_load((ROOT / os.environ.get("CRIME_CONFIG", "config.yaml")).read_text())
 PROC = ROOT / CFG["paths"]["processed"]
-BASE = PROC / "base_forecasts.csv"
+OUTDIR = PROC / CFG.get("out_subdir", "")           # isolates alt-config runs (e.g. regime2020)
+BASE = OUTDIR / "base_forecasts.csv"
 
 MEMBERS = ["sarima", "prophet", "xgboost"]          # ensemble members (naive = baseline)
 HORIZONS = CFG["horizons"]
@@ -141,8 +143,8 @@ def main():
     rg_fc, rg_wrows = apply_regime(wide, w_horizon)
 
     ens = pd.concat([sh_fc, rg_fc], ignore_index=True)
-    ens.to_csv(PROC / "ensemble_forecasts.csv", index=False)
-    pd.DataFrame(wrows + rg_wrows).to_csv(PROC / "ensemble_weights.csv", index=False)
+    ens.to_csv(OUTDIR / "ensemble_forecasts.csv", index=False)
+    pd.DataFrame(wrows + rg_wrows).to_csv(OUTDIR / "ensemble_weights.csv", index=False)
     print(f"Saved ensemble_forecasts.csv ({len(ens):,} rows) + ensemble_weights.csv")
 
     # --- report: validation-fit weights per horizon (the H2 finding) ---

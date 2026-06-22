@@ -18,6 +18,7 @@ Outputs:
   data/processed/metrics_by_horizon.csv   — every model/scheme x horizon x split
   data/processed/dm_tests.csv             — DM stat + p-value per comparison x horizon
 """
+import os
 from pathlib import Path
 
 import numpy as np
@@ -26,8 +27,9 @@ import yaml
 from scipy import stats
 
 ROOT = Path(__file__).resolve().parents[1]
-CFG = yaml.safe_load((ROOT / "config.yaml").read_text())
+CFG = yaml.safe_load((ROOT / os.environ.get("CRIME_CONFIG", "config.yaml")).read_text())
 PROC = ROOT / CFG["paths"]["processed"]
+OUTDIR = PROC / CFG.get("out_subdir", "")           # isolates alt-config runs (e.g. regime2020)
 PANEL = ROOT / CFG["paths"]["panel"]
 
 HORIZONS = CFG["horizons"]
@@ -41,9 +43,9 @@ BEST_SINGLE = "xgboost"
 
 # ------------------------------------------------------------------ assemble data
 def load_long():
-    base = pd.read_csv(PROC / "base_forecasts.csv", dtype={"district": str}, parse_dates=["week"])
+    base = pd.read_csv(OUTDIR / "base_forecasts.csv", dtype={"district": str}, parse_dates=["week"])
     base = base.rename(columns={"model": "name"})[["district", "week", "horizon", "name", "yhat", "y_true"]]
-    ens = pd.read_csv(PROC / "ensemble_forecasts.csv", dtype={"district": str}, parse_dates=["week"])
+    ens = pd.read_csv(OUTDIR / "ensemble_forecasts.csv", dtype={"district": str}, parse_dates=["week"])
     ens = ens.rename(columns={"scheme": "name"})[["district", "week", "horizon", "name", "yhat", "y_true"]]
     df = pd.concat([base, ens], ignore_index=True)
     df["split"] = np.where(df["week"] <= VAL_END, "val", "test")
@@ -123,14 +125,14 @@ def main():
     denom = mase_denominators()
 
     met = metrics_table(df, denom)
-    met.to_csv(PROC / "metrics_by_horizon.csv", index=False)
+    met.to_csv(OUTDIR / "metrics_by_horizon.csv", index=False)
 
     comps = [(s, BEST_SINGLE) for s in SCHEMES] + \
             [("horizon_adaptive", "static_inverse_rmse"),
              ("regime_adaptive", "static_inverse_rmse")]
     dm_rows = [dm_compare(df, a, b, h) for a, b in comps for h in HORIZONS]
     dm = pd.DataFrame(dm_rows)
-    dm.to_csv(PROC / "dm_tests.csv", index=False)
+    dm.to_csv(OUTDIR / "dm_tests.csv", index=False)
 
     # ---------- readable summary ----------
     order = SINGLES + SCHEMES

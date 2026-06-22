@@ -8,13 +8,18 @@
 # re-running skips any district already done. naive + xgboost are instant and added in
 # the final assemble pass.
 #
-# Usage:  bash src/run_base_backtest.sh
+# Usage:  bash src/run_base_backtest.sh [config.yaml]
+#   bash src/run_base_backtest.sh                       # main run -> data/processed/
+#   bash src/run_base_backtest.sh config_regime2020.yaml  # 2020 run -> data/processed/regime2020/
 set -u
 cd "$(dirname "$0")/.."
 source /opt/anaconda3/etc/profile.d/conda.sh
 conda activate crime-fcst
 
-# 22 active districts (008 already done by the canary; it will be skipped via checkpoint)
+export CRIME_CONFIG="${1:-config.yaml}"             # which experiment config the python steps read
+echo "Using CRIME_CONFIG=$CRIME_CONFIG"
+
+# 22 active districts; checkpointed, so any already-done district is skipped on a re-run
 DISTRICTS="001 002 003 004 005 006 007 008 009 010 011 012 014 015 016 017 018 019 020 022 024 025"
 
 i=0; n=$(echo $DISTRICTS | wc -w | tr -d ' ')

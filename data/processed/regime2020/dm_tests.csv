@@ -1,0 +1,21 @@
+comparison,horizon,n_origins,DM,p_value,better,sig_5pct
+static_inverse_rmse vs xgboost,1,156,-3.873757826559956,0.00015773404635021523,static_inverse_rmse,True
+static_inverse_rmse vs xgboost,4,156,-2.5522131250104834,0.011671092839659595,static_inverse_rmse,True
+static_inverse_rmse vs xgboost,8,156,-1.7217644688769194,0.087107157001195,static_inverse_rmse,False
+static_inverse_rmse vs xgboost,12,156,-1.936326301078762,0.05464705814826301,static_inverse_rmse,False
+horizon_adaptive vs xgboost,1,156,-4.856047387289765,2.9009632754408914e-06,horizon_adaptive,True
+horizon_adaptive vs xgboost,4,156,-3.2883754222782513,0.0012469716928003977,horizon_adaptive,True
+horizon_adaptive vs xgboost,8,156,-2.0641260306712526,0.04067259020361533,horizon_adaptive,True
+horizon_adaptive vs xgboost,12,156,-1.9563564904515807,0.0522205279903765,horizon_adaptive,False
+regime_adaptive vs xgboost,1,156,-3.751688585962482,0.00024772999262086904,regime_adaptive,True
+regime_adaptive vs xgboost,4,156,-2.3349933026264136,0.020826111774861208,regime_adaptive,True
+regime_adaptive vs xgboost,8,156,-1.9789634849373707,0.049591752777826736,regime_adaptive,True
+regime_adaptive vs xgboost,12,156,-2.1203657488342054,0.035567105826931074,regime_adaptive,True
+horizon_adaptive vs static_inverse_rmse,1,156,-2.5432018796113525,0.011963760219358143,horizon_adaptive,True
+horizon_adaptive vs static_inverse_rmse,4,156,-1.0219618111253885,0.3083913625402813,horizon_adaptive,False
+horizon_adaptive vs static_inverse_rmse,8,156,-0.9131934346008398,0.3625590607007728,horizon_adaptive,False
+horizon_adaptive vs static_inverse_rmse,12,156,-0.2768327581471284,0.7822773507336022,horizon_adaptive,False
+regime_adaptive vs static_inverse_rmse,1,156,-1.4067912147168773,0.1614911929759045,regime_adaptive,False
+regime_adaptive vs static_inverse_rmse,4,156,-1.0962167496247703,0.2746842036862467,regime_adaptive,False
+regime_adaptive vs static_inverse_rmse,8,156,-1.1173537450516506,0.26557204324321954,regime_adaptive,False
+regime_adaptive vs static_inverse_rmse,12,156,-0.9082561125679393,0.365152918049883,regime_adaptive,False

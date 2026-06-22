@@ -27,6 +27,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import sys
 import time
 import warnings
@@ -44,9 +45,11 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(Path(__file__).parent))
 from features import FEATURES  # noqa: E402  (reuse the locked feature list)
 
-CFG = yaml.safe_load((ROOT / "config.yaml").read_text())
+CFG = yaml.safe_load((ROOT / os.environ.get("CRIME_CONFIG", "config.yaml")).read_text())
+PROC = ROOT / CFG["paths"]["processed"]
+OUTDIR = PROC / CFG.get("out_subdir", "")           # isolates alt-config runs (e.g. regime2020)
 PANEL = ROOT / CFG["paths"]["panel"]
-FRAME = ROOT / CFG["paths"]["processed"] / "model_frame.csv"
+FRAME = OUTDIR / "model_frame.csv"
 HORIZONS = CFG["horizons"]
 MAXH = max(HORIZONS)
 WINDOW_START = pd.Timestamp(CFG["window_start"])
@@ -110,7 +113,7 @@ def forecast_seasonal_naive(grid, plook):
 # interruption (crash / thermal / OOM) loses at most the in-flight districts and a
 # re-run resumes by skipping any district whose checkpoint already exists. Workers are
 # module-level so joblib can pickle them; heavy deps import inside the subprocess.
-CKPT = ROOT / CFG["paths"]["processed"] / "checkpoints"
+CKPT = OUTDIR / "checkpoints"
 _COLS = ["district", "week", "horizon", "model", "yhat"]
 
 
@@ -211,7 +214,7 @@ def forecast_sarima(grid, series, n_jobs=1):
     districts = [t[0] for t in tasks]
     orders = {d: json.loads((CKPT / f"sarima_{d}.order.json").read_text())
               for d in districts if (CKPT / f"sarima_{d}.order.json").exists()}
-    (ROOT / CFG["paths"]["processed"] / "sarima_orders.json").write_text(
+    (OUTDIR / "sarima_orders.json").write_text(
         json.dumps(orders, indent=2))
     return _assemble("sarima", districts)
 
@@ -255,6 +258,7 @@ def forecast_xgboost(frame, grid):
 
 # ------------------------------------------------------------------------- main
 def run(models, districts, max_origins, refit_every, out, n_jobs=1):
+    OUTDIR.mkdir(parents=True, exist_ok=True)
     panel, frame, plook, series = load_data()
     grid = make_grid(frame, districts, max_origins)
     truth = long_targets(grid)
@@ -280,7 +284,7 @@ def run(models, districts, max_origins, refit_every, out, n_jobs=1):
     fc["week"] = pd.to_datetime(fc["week"])
     out_df = truth.merge(fc, on=["district", "week", "horizon"], how="left")
 
-    out_path = ROOT / CFG["paths"]["processed"] / out
+    out_path = OUTDIR / out
     out_df.to_csv(out_path, index=False)
     print(f"\nSaved base forecasts -> {out_path}  ({len(out_df):,} rows)")
     # quick coverage + sanity (RMSE per model/horizon on this grid)

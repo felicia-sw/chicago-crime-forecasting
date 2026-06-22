@@ -1,0 +1,56 @@
+# Alternate experiment config: the 2020-REGIME backtest.
+# Identical to config.yaml EXCEPT the temporal split is shifted ~3 years earlier so the
+# 2020 COVID structural break falls inside the TEST window (not training). This is the
+# only setup that actually evaluates forecasts ACROSS the shock — i.e. that can test
+# H3 (does the regime-adaptive ensemble beat static during a regime change?) and produce
+# the weight-trajectory-across-2020 centerpiece figure.
+#
+# Run it WITHOUT touching the main results:
+#   CRIME_CONFIG=config_regime2020.yaml python src/features.py
+#   bash src/run_base_backtest.sh config_regime2020.yaml     # heavy ~1-1.5h, jobs=1
+#   CRIME_CONFIG=config_regime2020.yaml python src/ensemble.py
+#   CRIME_CONFIG=config_regime2020.yaml python src/evaluate.py
+# All outputs land in data/processed/regime2020/ (out_subdir), leaving the main run intact.
+
+project: chicago-horizon-adaptive-ensemble
+seed: 42
+
+paths:
+  raw: data/raw
+  processed: data/processed
+  figures: figures
+  panel: data/processed/weekly_district_panel.csv
+
+out_subdir: regime2020          # <-- all outputs isolated here
+
+socrata:
+  domain: data.cityofchicago.org
+  dataset_id: ijzp-q8t2
+
+districts: ["001","002","003","004","005","006","007","008","009","010","011",
+            "012","014","015","016","017","018","019","020","022","024","025"]
+
+week_rule: "W-MON"
+
+horizons: [1, 4, 8, 12]
+forecast_strategy: direct
+
+window_start: "2015-01-01"
+eval_end: "2022-12-31"          # <-- cap origins at shock+recovery (bounds compute ~1-1.5h)
+
+# Split shifted earlier so 2020 is TESTED, not trained on:
+split:
+  train_end: "2018-12-31"       # train 2015-2018 (pre-shock)
+  val_end:   "2019-12-31"       # validation = 2019 (pre-shock calm) -> weights frozen before the break
+  test_start: "2020-01-01"      # test spans the 2020 shock + 2021-2022 recovery
+
+covid_window: ["2020-03-01", "2021-06-30"]
+
+top_crime_types: ["THEFT","BATTERY","CRIMINAL DAMAGE","ASSAULT","DECEPTIVE PRACTICE"]
+
+metrics: ["MAE","RMSE","MAPE","SMAPE"]
+
+ensemble:
+  schemes: ["inverse_rmse_static", "horizon_adaptive", "regime_adaptive"]
+  constraints: "weights >= 0, sum(weights) = 1"
+  rolling_window_weeks: 52

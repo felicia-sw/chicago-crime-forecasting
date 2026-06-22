@@ -28,13 +28,14 @@ build/
 dist/
 
 # Intermediate per-district model checkpoints (regenerable; superseded by base_forecasts.csv)
-data/processed/checkpoints/
+# (matches main run + any alt-config run, e.g. regime2020/)
+**/checkpoints/
 
-# Throwaway smoke/canary/test backtest outputs (not real results)
-data/processed/base_forecasts_smoke*.csv
-data/processed/base_forecasts_canary.csv
-data/processed/base_forecasts_lighttest.csv
-data/processed/base_forecasts_partial.csv
+# Throwaway smoke/canary/test backtest outputs (not real results), in any run dir
+base_forecasts_smoke*.csv
+base_forecasts_canary.csv
+base_forecasts_lighttest.csv
+base_forecasts_partial.csv
 
 # Claude Code tooling — kept local only, not part of the published repo
 .claude/
