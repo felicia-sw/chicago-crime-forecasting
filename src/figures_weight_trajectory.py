@@ -24,8 +24,8 @@ ROOT = Path(__file__).resolve().parents[1]
 CFG = yaml.safe_load((ROOT / os.environ.get("CRIME_CONFIG", "config.yaml")).read_text())
 OUTDIR = ROOT / CFG["paths"]["processed"] / CFG.get("out_subdir", "")
 FIGDIR = ROOT / CFG["paths"]["figures"]
-MEMBERS = ["sarima", "prophet", "xgboost"]
-COLORS = {"sarima": "#4C72B0", "prophet": "#DD8452", "xgboost": "#55A868"}
+MEMBERS = ["sarima", "prophet", "xgboost", "lstm"]
+COLORS = {"sarima": "#4C72B0", "prophet": "#DD8452", "xgboost": "#55A868", "lstm": "#C44E52"}
 HORIZONS = CFG["horizons"]
 
 

@@ -36,7 +36,7 @@ HORIZONS = CFG["horizons"]
 VAL_END = pd.Timestamp(CFG["split"]["val_end"])
 WIN_START = pd.Timestamp(CFG["window_start"])
 TRAIN_END = pd.Timestamp(CFG["split"]["train_end"])
-SINGLES = ["seasonal_naive", "sarima", "prophet", "xgboost"]
+SINGLES = ["seasonal_naive", "sarima", "prophet", "xgboost", "lstm"]
 SCHEMES = ["static_inverse_rmse", "horizon_adaptive", "regime_adaptive"]
 BEST_SINGLE = "xgboost"
 

@@ -41,7 +41,7 @@ HORIZONS = CFG["horizons"]
 VAL_END = pd.Timestamp(CFG["split"]["val_end"])
 WIN_START = pd.Timestamp(CFG["window_start"])
 SEED = CFG["seed"]
-MEMBERS = ["sarima", "prophet", "xgboost"]
+MEMBERS = ["sarima", "prophet", "xgboost", "lstm"]
 FEAT = [c for c in FEATURES if c != "district"] + ["district"]
 
 
@@ -118,7 +118,7 @@ def seed_stability(seeds=range(10)):
     frame["district"] = frame["district"].astype("category")
     grid = frame[frame["split"].isin(["val", "test"])].copy()
     grid["district"] = grid["district"].astype(pd.CategoricalDtype(categories=cats))
-    sp = base_wide(OUTDIR)[["district", "week", "horizon", "sarima", "prophet", "y_true", ]]
+    sp = base_wide(OUTDIR)[["district", "week", "horizon", "sarima", "prophet", "lstm", "y_true"]]
 
     recs = []
     for s in seeds:

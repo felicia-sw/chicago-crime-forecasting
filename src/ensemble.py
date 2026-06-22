@@ -35,7 +35,7 @@ PROC = ROOT / CFG["paths"]["processed"]
 OUTDIR = PROC / CFG.get("out_subdir", "")           # isolates alt-config runs (e.g. regime2020)
 BASE = OUTDIR / "base_forecasts.csv"
 
-MEMBERS = ["sarima", "prophet", "xgboost"]          # ensemble members (naive = baseline)
+MEMBERS = ["sarima", "prophet", "xgboost", "lstm"]  # ensemble members (naive = baseline)
 HORIZONS = CFG["horizons"]
 VAL_END = pd.Timestamp(CFG["split"]["val_end"])     # <= this = validation; after = test
 ROLL_W = int(CFG["ensemble"]["rolling_window_weeks"])
