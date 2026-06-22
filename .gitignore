@@ -26,3 +26,15 @@ env/
 *.tmp
 build/
 dist/
+
+# Intermediate per-district model checkpoints (regenerable; superseded by base_forecasts.csv)
+data/processed/checkpoints/
+
+# Throwaway smoke/canary/test backtest outputs (not real results)
+data/processed/base_forecasts_smoke*.csv
+data/processed/base_forecasts_canary.csv
+data/processed/base_forecasts_lighttest.csv
+data/processed/base_forecasts_partial.csv
+
+# Claude Code local settings (machine-specific)
+.claude/settings.local.json
