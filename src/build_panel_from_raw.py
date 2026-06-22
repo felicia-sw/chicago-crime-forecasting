@@ -31,8 +31,8 @@ def main(src: str) -> None:
     for chunk in pd.read_csv(src, usecols=usecols, chunksize=CHUNK,
                              dtype={"District": "string", "Primary Type": "string"}):
         n += len(chunk)
-        chunk["dt"] = pd.to_datetime(chunk["Date"], format="%m/%d/%Y %I:%M:%S %p",
-                                     errors="coerce")
+        chunk["dt"] = pd.to_datetime(chunk["Date"].str[:10], format="%m/%d/%Y",
+                                     errors="coerce")  # date-only parse = much faster
         chunk = chunk.dropna(subset=["dt"])
         chunk["district"] = (chunk["District"].str.extract(r"(\d+)")[0]
                              .str.zfill(3))

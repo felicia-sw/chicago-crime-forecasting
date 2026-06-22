@@ -1,0 +1,21 @@
+comparison,horizon,n_origins,DM,p_value,better,sig_5pct
+static_inverse_rmse vs xgboost,1,178,-1.1875347899879864,0.2366079355768032,static_inverse_rmse,False
+static_inverse_rmse vs xgboost,4,175,-5.114432522699448,8.246496845004439e-07,static_inverse_rmse,True
+static_inverse_rmse vs xgboost,8,171,-4.25994421484816,3.378248158770241e-05,static_inverse_rmse,True
+static_inverse_rmse vs xgboost,12,167,-3.532334925912519,0.0005335081983637587,static_inverse_rmse,True
+horizon_adaptive vs xgboost,1,178,-2.0351285628185636,0.04332932738483277,horizon_adaptive,True
+horizon_adaptive vs xgboost,4,175,-4.977480963670204,1.540209105575714e-06,horizon_adaptive,True
+horizon_adaptive vs xgboost,8,171,-5.562685610771454,1.0145840138535991e-07,horizon_adaptive,True
+horizon_adaptive vs xgboost,12,167,-5.051140586341575,1.1476620229682128e-06,horizon_adaptive,True
+regime_adaptive vs xgboost,1,178,-2.3459259206062373,0.020087247174208435,regime_adaptive,True
+regime_adaptive vs xgboost,4,175,-4.84182810062536,2.827065162458069e-06,regime_adaptive,True
+regime_adaptive vs xgboost,8,171,-4.282417296194712,3.084469538412538e-05,regime_adaptive,True
+regime_adaptive vs xgboost,12,167,-3.789913464602445,0.00021054449187983657,regime_adaptive,True
+horizon_adaptive vs static_inverse_rmse,1,178,-1.283903424996111,0.20085388131825857,horizon_adaptive,False
+horizon_adaptive vs static_inverse_rmse,4,175,1.346028764950721,0.180044317322818,static_inverse_rmse,False
+horizon_adaptive vs static_inverse_rmse,8,171,1.4210947648310674,0.15712093788708617,static_inverse_rmse,False
+horizon_adaptive vs static_inverse_rmse,12,167,1.597210739788429,0.11212058920964833,static_inverse_rmse,False
+regime_adaptive vs static_inverse_rmse,1,178,-1.1584798458784047,0.24822893651098824,regime_adaptive,False
+regime_adaptive vs static_inverse_rmse,4,175,0.6537871225740063,0.5141120524834502,static_inverse_rmse,False
+regime_adaptive vs static_inverse_rmse,8,171,0.9970848024453804,0.3201404659034354,static_inverse_rmse,False
+regime_adaptive vs static_inverse_rmse,12,167,0.7023137403943631,0.4834671487363087,static_inverse_rmse,False
