@@ -1,0 +1,28 @@
+# Large raw data (exceeds GitHub's 100 MB limit — keep local only)
+Crimes_-_2001_to_Present.csv
+*.csv.gz
+*.parquet
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+.venv/
+venv/
+env/
+
+# Environment / secrets
+.env
+.env.*
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Temp / build
+*.log
+*.tmp
+build/
+dist/

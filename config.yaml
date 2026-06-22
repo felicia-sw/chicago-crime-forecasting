@@ -1,0 +1,45 @@
+# Locked configuration for the crime-forecasting study. See CONTRIBUTION.md.
+project: chicago-horizon-adaptive-ensemble
+seed: 42
+
+paths:
+  raw: data/raw
+  processed: data/processed
+  figures: figures
+  panel: data/processed/weekly_district_panel.csv
+
+socrata:
+  domain: data.cityofchicago.org
+  dataset_id: ijzp-q8t2
+  # app_token read from env SOCRATA_APP_TOKEN (optional, raises rate limits)
+
+# 22 active police districts (retired/merged 013, 021, 023 and artifact 031 excluded)
+districts: ["001","002","003","004","005","006","007","008","009","010","011",
+            "012","014","015","016","017","018","019","020","022","024","025"]
+
+week_rule: "W-MON"          # weeks start Monday; absent weeks -> 0 incidents (not missing)
+
+horizons: [1, 4, 8, 12]     # weeks ahead
+forecast_strategy: direct   # 'direct' per-horizon models; 'recursive' as a sensitivity
+
+# Modeling window trimmed to 2015+ : pre-2015 is a different, higher-volume regime
+# (~40k/mo vs ~20k/mo now) and heavier to fit — per supervisor's OK to cut the
+# long training history. Train-window length is also tested in sensitivity analysis.
+window_start: "2015-01-01"
+
+# Strictly temporal split + rolling-origin CV (no shuffling)
+split:
+  train_end: "2020-12-31"   # training strictly before 2021 (per supervisor)
+  val_end:   "2022-12-31"   # ensemble weights fit on validation ONLY
+  test_start: "2023-01-01"
+
+covid_window: ["2020-03-01", "2021-06-30"]   # featured as a break, also a robustness regime
+
+top_crime_types: ["THEFT","BATTERY","CRIMINAL DAMAGE","ASSAULT","DECEPTIVE PRACTICE"]
+
+metrics: ["MAE","RMSE","MAPE","SMAPE"]        # MAE/RMSE primary; MAPE/SMAPE masked at actual=0
+
+ensemble:
+  schemes: ["inverse_rmse_static", "horizon_adaptive", "regime_adaptive"]
+  constraints: "weights >= 0, sum(weights) = 1"   # constrained optimization on validation
+  rolling_window_weeks: 52                          # for regime/time-varying weights
