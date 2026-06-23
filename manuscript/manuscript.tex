@@ -170,7 +170,8 @@ A strictly temporal rolling-origin backtest emits forecasts keyed by (district, 
 every scheme is judged on identical points. We report MAE and RMSE (primary), MAPE/SMAPE (masked at
 actual $=0$), and MASE scaled by the in-sample seasonal-naive. Statistical significance uses the
 Diebold--Mariano test with the Harvey--Leybourne--Newbold small-sample correction and a squared-error
-loss differential averaged across districts per origin week. We interpret the XGBoost member with SHAP
+loss differential averaged across districts per origin week, with Benjamini--Hochberg control of the
+false discovery rate across the full family of tests. We interpret the XGBoost member with SHAP
 values (computed via the model's native TreeSHAP), framed as explaining that component, not the
 ensemble.
 
@@ -213,8 +214,8 @@ indistinguishable from---and at long horizons marginally better than---the adapt
 this honestly; the value of adaptivity emerges under regime change (Section~\ref{sec:regime}).
 
 \begin{table}[t]\centering
-\caption{Diebold--Mariano tests (squared error, HLN correction), main split. Negative statistic
-favours the ensemble; $^\ast$ denotes $p<0.05$.}
+\caption{Diebold--Mariano tests (squared error, HLN correction, Benjamini--Hochberg FDR-corrected),
+main split. Negative statistic favours the ensemble; $^\ast$ denotes significance at FDR 5\%.}
 \label{tab:dm}
 \small
 \begin{tabular}{l rrrr}
@@ -255,11 +256,14 @@ Using the shifted split that places 2020 in the test window, Fig.~\ref{fig:traj}
 regime-adaptive weights over time. Authority re-allocates sharply across the break: the ensemble
 shifts almost entirely to Prophet during the acute COVID shock, then returns weight to XGBoost and the
 LSTM in recovery, with SARIMA re-emerging in 2022. Table~\ref{tab:regime} quantifies the payoff: the
-regime-adaptive blend improves on the static blend by 7--11\% during the acute shock, but by
-approximately 0\% (occasionally slightly negative) in the calm recovery. The improvement is
-statistically significant at $h{=}1$ within the acute-shock window ($p=0.041$). This supports H3 in
-the form the data warrant: \emph{adaptivity's advantage is conditional on regime change}, and it is
-largest precisely at the structural break.
+regime-adaptive blend improves on the static blend by 7--11\% (RMSE) during the acute shock, but by
+approximately 0\% (occasionally slightly negative) in the calm recovery. This improvement is, however,
+\emph{not} statistically significant after correcting for multiple comparisons (the strongest case is
+the acute-shock window at $h{=}1$: raw $p=0.041$, $p_{\mathrm{BH}}=0.096$); it is a numerical,
+regime-contingent edge rather than a significant accuracy gain. This is the honest form of H3:
+the optimal mix shifts with regime, but adaptive weighting does not significantly beat a simple static
+inverse-RMSE blend even at the structural break. The unambiguous, statistically robust result is that
+the ensemble (including the static blend) significantly beats the best single model across the shock.
 
 \begin{figure}[t]\centering
 \includegraphics[width=\linewidth]{fig_weight_trajectory_2020.png}
