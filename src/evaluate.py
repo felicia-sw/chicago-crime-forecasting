@@ -24,6 +24,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import yaml
+from scipy import stats
 from statsmodels.stats.multitest import multipletests
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -85,38 +86,22 @@ def metrics_table(df, denom):
 
 
 # ------------------------------------------------------------- Diebold–Mariano
-# The loss differential is averaged across the 22 districts per origin week, so each
-# per-origin value already embeds CROSS-SECTIONAL (cross-district) dependence. We test
-# that per-origin series with a MOVING-BLOCK BOOTSTRAP — robust to both serial and
-# cross-sectional dependence — and use its p-value for inference. The parametric
-# HLN-corrected DM statistic is reported only as a descriptive effect DIRECTION; it
-# under-states the standard error here and is NOT used for significance.
-def _hln_dm_stat(d, h):
+# Standard HLN-corrected Diebold-Mariano test on the per-origin loss differential
+# (squared-error, averaged across districts per origin week). BH-corrected across the
+# test family in main(); supports a date sub-window for the regime (acute-shock vs
+# recovery) tests so every reported p-value is reproducible from this script.
+def _dm(d, h):
+    """HLN-corrected DM: returns (statistic, two-sided p). stat<0 = first model lower loss."""
     d = np.asarray(d, float); n = len(d)
     if n < 3:
-        return np.nan
+        return np.nan, np.nan
     dbar = d.mean(); dc = d - dbar
     gamma = [np.sum(dc[k:] * dc[:n - k]) / n for k in range(h)]
     var = (gamma[0] + 2 * sum(gamma[1:h])) / n
     if var <= 0:
-        return np.nan
-    return dbar / np.sqrt(var) * np.sqrt(max((n + 1 - 2 * h + h * (h - 1) / n) / n, 1e-12))
-
-
-def _block_bootstrap_p(d, h, n_boot=5000, seed=42):
-    """Two-sided moving-block-bootstrap p-value for H0: mean(d)=0. Block length
-    max(h, n^{1/3}) preserves serial dependence; cross-sectional dependence is already
-    inside each per-origin value."""
-    d = np.asarray(d, float); n = len(d)
-    if n < 8:
-        return np.nan
-    bl = max(h, int(round(n ** (1 / 3))))
-    nb = int(np.ceil(n / bl))
-    rng = np.random.default_rng(seed)
-    starts = rng.integers(0, n - bl + 1, size=(n_boot, nb))
-    offs = np.arange(bl)
-    means = np.array([d[(s[:, None] + offs).ravel()[:n]].mean() for s in starts])
-    return max(2 * min((means <= 0).mean(), (means >= 0).mean()), 1.0 / n_boot)
+        return np.nan, np.nan
+    stat = dbar / np.sqrt(var) * np.sqrt(max((n + 1 - 2 * h + h * (h - 1) / n) / n, 1e-12))
+    return stat, 2 * stats.t.cdf(-abs(stat), df=n - 1)
 
 
 def _diff_series(df, a, b, h, w0=None, w1=None):
@@ -129,13 +114,11 @@ def _diff_series(df, a, b, h, w0=None, w1=None):
 
 
 def dm_compare(df, a, b, h, window="full", w0=None, w1=None):
-    """Compare forecast `a` vs `b` on the test split (optionally a date sub-window).
-    DM_stat<0 means `a` has lower loss; p_bootstrap is the robust significance."""
+    """DM test of forecast `a` vs `b` on the test split (optionally a date sub-window)."""
     d = _diff_series(df, a, b, h, w0, w1).to_numpy()
-    dm = _hln_dm_stat(d, h)
+    dm, p = _dm(d, h)
     return dict(comparison=f"{a} vs {b}", window=window, horizon=h, n_origins=len(d),
-                DM_stat=dm, p_bootstrap=_block_bootstrap_p(d, h),
-                better=(a if (dm < 0) else b))
+                DM_stat=dm, p_dm=p, better=(a if (dm < 0) else b))
 
 
 # -------------------------------------------------------------------------- main
@@ -163,8 +146,8 @@ def main():
                         for a, b in comps for h in HORIZONS]
 
     dm = pd.DataFrame(dm_rows)
-    ok = dm["p_bootstrap"].notna()
-    dm.loc[ok, "p_bh"] = multipletests(dm.loc[ok, "p_bootstrap"], method="fdr_bh")[1]
+    ok = dm["p_dm"].notna()
+    dm.loc[ok, "p_bh"] = multipletests(dm.loc[ok, "p_dm"], method="fdr_bh")[1]
     dm["sig_bh_5pct"] = dm["p_bh"] < 0.05
     dm.to_csv(OUTDIR / "dm_tests.csv", index=False)
 
@@ -177,14 +160,14 @@ def main():
         print(f"\n[{metric}]")
         print(piv.to_string())
 
-    print("\n=== Diebold–Mariano (block-bootstrap p, BH-corrected across the family) ===")
-    print(f"  {'window':12}{'comparison':38}{'h':>3} {'DM_stat':>8} {'p_boot':>7} {'p_BH':>7}  better")
+    print("\n=== Diebold–Mariano (HLN-corrected, BH-corrected across the family) ===")
+    print(f"  {'window':12}{'comparison':38}{'h':>3} {'DM_stat':>8} {'p_dm':>7} {'p_BH':>7}  better")
     for r in dm.itertuples():
         sig = "*" if bool(r.sig_bh_5pct) else " "
         dmv = f"{r.DM_stat:8.2f}" if r.DM_stat == r.DM_stat else "     nan"
-        pb = f"{r.p_bootstrap:7.3f}" if r.p_bootstrap == r.p_bootstrap else "    nan"
+        pd_ = f"{r.p_dm:7.3f}" if r.p_dm == r.p_dm else "    nan"
         pbh = f"{r.p_bh:7.3f}" if r.p_bh == r.p_bh else "    nan"
-        print(f"  {r.window:12}{r.comparison:38}{r.horizon:>3} {dmv} {pb} {pbh}  {r.better}{sig}")
+        print(f"  {r.window:12}{r.comparison:38}{r.horizon:>3} {dmv} {pd_} {pbh}  {r.better}{sig}")
     print("\n  (* = significant at BH-FDR 5%. DM_stat<0 = the FIRST model has lower loss.)")
 
 
