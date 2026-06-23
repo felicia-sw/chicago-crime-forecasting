@@ -24,7 +24,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import yaml
-from scipy import stats
+from statsmodels.stats.multitest import multipletests
 
 ROOT = Path(__file__).resolve().parents[1]
 CFG = yaml.safe_load((ROOT / os.environ.get("CRIME_CONFIG", "config.yaml")).read_text())
@@ -85,38 +85,57 @@ def metrics_table(df, denom):
 
 
 # ------------------------------------------------------------- Diebold–Mariano
-def dm_series(d, h):
-    """DM stat (HLN-corrected) + two-sided p for a loss-differential series d=loss_a-loss_b."""
-    d = np.asarray(d, float)
-    n = len(d)
+# The loss differential is averaged across the 22 districts per origin week, so each
+# per-origin value already embeds CROSS-SECTIONAL (cross-district) dependence. We test
+# that per-origin series with a MOVING-BLOCK BOOTSTRAP — robust to both serial and
+# cross-sectional dependence — and use its p-value for inference. The parametric
+# HLN-corrected DM statistic is reported only as a descriptive effect DIRECTION; it
+# under-states the standard error here and is NOT used for significance.
+def _hln_dm_stat(d, h):
+    d = np.asarray(d, float); n = len(d)
     if n < 3:
-        return np.nan, np.nan
-    dbar = d.mean()
-    dc = d - dbar
+        return np.nan
+    dbar = d.mean(); dc = d - dbar
     gamma = [np.sum(dc[k:] * dc[:n - k]) / n for k in range(h)]
     var = (gamma[0] + 2 * sum(gamma[1:h])) / n
     if var <= 0:
-        return np.nan, np.nan
-    dm = dbar / np.sqrt(var)
-    hln = np.sqrt(max((n + 1 - 2 * h + h * (h - 1) / n) / n, 1e-12))
-    dm_adj = dm * hln
-    p = 2 * stats.t.cdf(-abs(dm_adj), df=n - 1)
-    return dm_adj, p
+        return np.nan
+    return dbar / np.sqrt(var) * np.sqrt(max((n + 1 - 2 * h + h * (h - 1) / n) / n, 1e-12))
 
 
-def dm_compare(df, a, b, h, split="test"):
-    """Compare forecast `a` vs `b`: negative DM/winner=a means a has lower loss."""
-    sub = df[(df["split"] == split) & (df["horizon"] == h) & (df["name"].isin([a, b]))]
+def _block_bootstrap_p(d, h, n_boot=5000, seed=42):
+    """Two-sided moving-block-bootstrap p-value for H0: mean(d)=0. Block length
+    max(h, n^{1/3}) preserves serial dependence; cross-sectional dependence is already
+    inside each per-origin value."""
+    d = np.asarray(d, float); n = len(d)
+    if n < 8:
+        return np.nan
+    bl = max(h, int(round(n ** (1 / 3))))
+    nb = int(np.ceil(n / bl))
+    rng = np.random.default_rng(seed)
+    starts = rng.integers(0, n - bl + 1, size=(n_boot, nb))
+    offs = np.arange(bl)
+    means = np.array([d[(s[:, None] + offs).ravel()[:n]].mean() for s in starts])
+    return max(2 * min((means <= 0).mean(), (means >= 0).mean()), 1.0 / n_boot)
+
+
+def _diff_series(df, a, b, h, w0=None, w1=None):
+    sub = df[(df["split"] == "test") & (df["horizon"] == h) & (df["name"].isin([a, b]))]
+    if w0 is not None:
+        sub = sub[sub["week"].between(w0, w1)]
     w = sub.pivot_table(index=["district", "week"], columns="name", values="yhat")
-    yt = sub.groupby(["district", "week"])["y_true"].first()
-    w = w.join(yt)
-    la = (w[a] - w["y_true"]) ** 2
-    lb = (w[b] - w["y_true"]) ** 2
-    d = (la - lb).groupby(level="week").mean().sort_index()   # one value per origin week
-    dm, p = dm_series(d.to_numpy(), h)
-    better = a if (dm < 0) else b
-    return dict(comparison=f"{a} vs {b}", horizon=h, n_origins=len(d),
-                DM=dm, p_value=p, better=better, sig_5pct=bool(p < 0.05) if p == p else False)
+    w = w.join(sub.groupby(["district", "week"])["y_true"].first())
+    return ((w[a] - w["y_true"]) ** 2 - (w[b] - w["y_true"]) ** 2).groupby(level="week").mean().sort_index()
+
+
+def dm_compare(df, a, b, h, window="full", w0=None, w1=None):
+    """Compare forecast `a` vs `b` on the test split (optionally a date sub-window).
+    DM_stat<0 means `a` has lower loss; p_bootstrap is the robust significance."""
+    d = _diff_series(df, a, b, h, w0, w1).to_numpy()
+    dm = _hln_dm_stat(d, h)
+    return dict(comparison=f"{a} vs {b}", window=window, horizon=h, n_origins=len(d),
+                DM_stat=dm, p_bootstrap=_block_bootstrap_p(d, h),
+                better=(a if (dm < 0) else b))
 
 
 # -------------------------------------------------------------------------- main
@@ -131,7 +150,22 @@ def main():
             [("horizon_adaptive", "static_inverse_rmse"),
              ("regime_adaptive", "static_inverse_rmse")]
     dm_rows = [dm_compare(df, a, b, h) for a, b in comps for h in HORIZONS]
+
+    # Reproducible windowed DM tests when the 2020 shock overlaps the test split
+    # (the regime2020 run): acute shock = COVID window, recovery = after it.
+    cov0, cov1 = (pd.Timestamp(x) for x in CFG["covid_window"])
+    tw = df.loc[df["split"] == "test", "week"]
+    if not tw.empty and tw.min() <= cov1 and tw.max() >= cov0:
+        eval_end = pd.Timestamp(CFG.get("eval_end") or tw.max())
+        for label, a0, a1 in [("acute_shock", cov0, cov1),
+                              ("recovery", cov1 + pd.Timedelta(weeks=1), eval_end)]:
+            dm_rows += [dm_compare(df, a, b, h, label, a0, a1)
+                        for a, b in comps for h in HORIZONS]
+
     dm = pd.DataFrame(dm_rows)
+    ok = dm["p_bootstrap"].notna()
+    dm.loc[ok, "p_bh"] = multipletests(dm.loc[ok, "p_bootstrap"], method="fdr_bh")[1]
+    dm["sig_bh_5pct"] = dm["p_bh"] < 0.05
     dm.to_csv(OUTDIR / "dm_tests.csv", index=False)
 
     # ---------- readable summary ----------
@@ -143,14 +177,15 @@ def main():
         print(f"\n[{metric}]")
         print(piv.to_string())
 
-    print("\n=== Diebold–Mariano (squared-error, HLN): is the FIRST model significantly better? ===")
-    print(f"  {'comparison':40} {'h':>3} {'DM':>8} {'p':>8}  better(sig@5%)")
-    for r in dm_rows:
-        star = "*" if r["sig_5pct"] else " "
-        dmv = f"{r['DM']:8.2f}" if r["DM"] == r["DM"] else "     nan"
-        pv = f"{r['p_value']:8.3f}" if r["p_value"] == r["p_value"] else "     nan"
-        print(f"  {r['comparison']:40} {r['horizon']:>3} {dmv} {pv}  {r['better']}{star}")
-    print("\n  (* = difference significant at 5%. 'better' = lower squared-error loss.)")
+    print("\n=== Diebold–Mariano (block-bootstrap p, BH-corrected across the family) ===")
+    print(f"  {'window':12}{'comparison':38}{'h':>3} {'DM_stat':>8} {'p_boot':>7} {'p_BH':>7}  better")
+    for r in dm.itertuples():
+        sig = "*" if bool(r.sig_bh_5pct) else " "
+        dmv = f"{r.DM_stat:8.2f}" if r.DM_stat == r.DM_stat else "     nan"
+        pb = f"{r.p_bootstrap:7.3f}" if r.p_bootstrap == r.p_bootstrap else "    nan"
+        pbh = f"{r.p_bh:7.3f}" if r.p_bh == r.p_bh else "    nan"
+        print(f"  {r.window:12}{r.comparison:38}{r.horizon:>3} {dmv} {pb} {pbh}  {r.better}{sig}")
+    print("\n  (* = significant at BH-FDR 5%. DM_stat<0 = the FIRST model has lower loss.)")
 
 
 if __name__ == "__main__":

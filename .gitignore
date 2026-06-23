@@ -40,3 +40,4 @@ base_forecasts_partial.csv
 # Claude Code tooling — kept local only, not part of the published repo
 .claude/
 CLAUDE.md
+manuscript/*.docx
