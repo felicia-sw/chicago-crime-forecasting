@@ -41,3 +41,12 @@ base_forecasts_partial.csv
 .claude/
 CLAUDE.md
 manuscript/*.docx
+
+# Planning/handover docs — kept on local disk only, not in the public repo
+HANDOVER.md
+CONTRIBUTION.md
+Research_Plan_Summary.docx
+
+# Large regenerable pipeline outputs (regenerate in seconds; base_forecasts.csv is kept)
+model_frame.csv
+ensemble_forecasts.csv

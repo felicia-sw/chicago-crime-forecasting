@@ -1,4 +1,4 @@
-# Locked configuration for the crime-forecasting study. See CONTRIBUTION.md.
+# Single source of truth for the crime-forecasting pipeline (districts, horizons, split, ensemble).
 project: chicago-horizon-adaptive-ensemble
 seed: 42
 

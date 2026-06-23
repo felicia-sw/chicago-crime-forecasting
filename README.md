@@ -15,23 +15,20 @@ but *adaptive* weighting does **not** significantly beat a simple static inverse
 blend in any regime — the optimal mix shifts with horizon/regime descriptively, yet that
 does not translate into a significant accuracy gain. See `manuscript/REVIEW_REPORT.md`.
 
-See `CONTRIBUTION.md` (locked scope/RQs/guardrails) and `HANDOVER.md` (full state).
-
 ## Project layout
 ```
 chicago-crime-forecasting/
 ├── config.yaml               # single source of truth (districts, horizons, split, ensemble)
 ├── config_regime2020.yaml    # alt split placing the 2020 shock in the test window
 ├── requirements.txt          # env deps (run in the `crime-fcst` conda env; numpy<2 for pmdarima)
-├── CONTRIBUTION.md HANDOVER.md   # locked plan + handover brief
 ├── data/
 │   ├── raw/                  # (gitignored) raw 1.9 GB incidents CSV
-│   └── processed/            # panels + all modeling outputs
+│   └── processed/            # source panels + committed results
 │       ├── weekly_district_panel.csv   # MODELING DATA (22 districts × weeks)
-│       ├── model_frame.csv             # leakage-safe feature/target frame
-│       ├── base_forecasts.csv          # per-(district,horizon,origin) base-model forecasts
-│       ├── ensemble_forecasts.csv / ensemble_weights.csv
+│       ├── base_forecasts.csv          # base-model forecasts (the expensive SARIMA output)
+│       ├── ensemble_weights.csv        # fitted ensemble weights
 │       ├── metrics_by_horizon.csv / dm_tests.csv   # evaluation + significance
+│       #  (model_frame.csv & ensemble_forecasts.csv regenerate from the pipeline; gitignored)
 │       ├── robustness_*.csv / shap_importance.csv
 │       ├── checkpoints/                # per-district SARIMA cache (resume; gitignored)
 │       └── regime2020/                 # isolated outputs of the 2020-regime run
